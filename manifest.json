@@ -1,0 +1,14 @@
+{
+  "id": "socials",
+  "name": "Socials",
+  "version": "1.0.0",
+  "sdk": 1,
+  "description": "LinkedIn, Facebook pages and Instagram for Agent Control. Agents write drafts; a post only goes out after its account's approver clicks Publish, now or at the scheduled time. Adds a Socials page with the content calendar.",
+  "author": "Remco Eijsackers",
+  "homepage": "https://github.com/remcoeijsackers/agent-control-socials",
+  "permissions": ["integrations", "outbox", "routes"],
+  "main": "index.mjs",
+  "integrations": ["modules/linkedin", "modules/facebook", "modules/instagram"],
+  "routes": [{ "method": "GET", "path": "/posts" }],
+  "nav": [{ "id": "socials", "label": "Socials", "page": "index.html" }]
+}

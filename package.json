@@ -1,0 +1,12 @@
+{
+  "name": "agent-control-socials",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Socials plugin for Agent Control: LinkedIn, Facebook pages and Instagram, with a content calendar.",
+  "type": "module",
+  "license": "MIT",
+  "scripts": {
+    "test": "node --test test/*.test.mjs"
+  },
+  "engines": { "node": ">=22" }
+}

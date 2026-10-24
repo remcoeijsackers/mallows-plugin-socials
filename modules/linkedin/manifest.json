@@ -1,0 +1,22 @@
+{
+  "id": "linkedin",
+  "name": "LinkedIn",
+  "version": "1.0.0",
+  "sdk": 1,
+  "kind": "social",
+  "auth": "oauth",
+  "author": "Remco Eijsackers",
+  "homepage": "https://github.com/remcoeijsackers/agent-control-socials",
+  "description": "Publishing through the Posts API requires your own LinkedIn app with the product \"Share on LinkedIn\" (personal profile) or \"Community Management API\" (company page, with review).",
+  "actions": ["read", "draft", "publish"],
+  "outbox": { "channel": "linkedin", "maxLength": 3000 },
+  "settings": [
+    { "key": "clientId", "label": "Client ID of your LinkedIn app", "required": true },
+    { "key": "author", "label": "Author (urn:li:person:… or urn:li:organization:…)", "placeholder": "empty = the signed-in profile", "pattern": "^urn:li:(person|organization):[A-Za-z0-9_-]+$" },
+    { "key": "apiVersion", "label": "LinkedIn-Version", "placeholder": "202605", "pattern": "^\\d{6}$" }
+  ],
+  "secrets": [
+    { "key": "clientSecret", "label": "Client secret", "help": "From your LinkedIn app; needed before you can sign in" },
+    { "key": "token", "label": "Or paste an access token", "help": "Without a refresh token: valid until it expires" }
+  ]
+}

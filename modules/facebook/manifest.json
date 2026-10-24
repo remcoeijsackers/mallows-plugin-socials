@@ -1,0 +1,18 @@
+{
+  "id": "facebook",
+  "name": "Facebook page",
+  "version": "1.0.0",
+  "sdk": 1,
+  "kind": "social",
+  "auth": "token",
+  "author": "Remco Eijsackers",
+  "homepage": "https://github.com/remcoeijsackers/agent-control-socials",
+  "description": "Publishing through the Meta Graph API with a page token (pages_manage_posts). Paste the token of a system user or from the Graph API Explorer; it goes straight into the key store.",
+  "actions": ["read", "draft", "publish"],
+  "outbox": { "channel": "facebook" },
+  "settings": [
+    { "key": "pageId", "label": "Page ID", "required": true },
+    { "key": "apiVersion", "label": "Graph API version", "placeholder": "v26.0", "pattern": "^v?\\d+\\.\\d+$" }
+  ],
+  "secrets": [{ "key": "token", "label": "Page access token", "required": true }]
+}

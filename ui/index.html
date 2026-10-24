@@ -1,0 +1,175 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Socials</title>
+<!--
+  The Socials page. Agent Control shows it in a sandboxed iframe (scripts only, no same-origin), so everything is in
+  this one file and all data comes through the bridge: postMessage to the parent, which only forwards requests to this
+  plugin's own routes (GET /posts) in the current workspace. Colours and font come from the dashboard's design tokens
+  in the "agent-control:init" message; the fallbacks below are only for opening the file on its own.
+-->
+<style>
+  :root {
+    --bg: #0e1326; --surface: rgba(255,255,255,.04); --surface-solid: #141a33; --border: rgba(140,160,255,.16); --border-strong: rgba(140,160,255,.3);
+    --text: #e9ecf6; --muted: #8e97b3; --accent: #7c95ff; --accent-contrast: #0b0e1a; --ok: #3ccf91; --warn: #f5b84a; --bad: #ef6461; --info: #6cb6ff; --radius: 14px;
+    --linkedin: #0a66c2; --facebook: #1877f2; --instagram: #d6249f;
+    color-scheme: dark;
+  }
+  :root[data-mode="light"] { color-scheme: light; }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; background: transparent; color: var(--text); font: 14px/1.45 var(--font, system-ui, -apple-system, "Segoe UI", sans-serif); }
+  body { padding: 16px; }
+  h1 { font-size: 1.2rem; margin: 0; }
+  h2 { font-size: .8rem; margin: 0 0 10px; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 600; }
+  .row { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .spacer { flex: 1; }
+  .meta { color: var(--muted); font-size: .85rem; }
+  .btn { font: inherit; font-size: .85rem; padding: 5px 12px; border-radius: 999px; border: 1px solid var(--border-strong); background: transparent; color: var(--text); cursor: pointer; }
+  .btn:hover { border-color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-contrast); font-weight: 600; }
+  .panel { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 14px 16px; margin-top: 14px; }
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(130px, 1fr)); gap: 10px; margin-top: 14px; }
+  .stat { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 10px 14px; }
+  .stat b { display: block; font-size: 1.6rem; font-variant-numeric: tabular-nums; line-height: 1.2; }
+  .stat.waiting b { color: var(--warn); } .stat.scheduled b { color: var(--info); } .stat.published b { color: var(--ok); } .stat.failed b { color: var(--bad); }
+  .cal { display: grid; grid-template-columns: repeat(7, minmax(0, 1fr)); gap: 6px; }
+  .day { min-height: 92px; border: 1px solid var(--border); border-radius: 10px; padding: 6px; display: flex; flex-direction: column; gap: 4px; min-width: 0; }
+  .day.today { border-color: var(--accent); }
+  .day .d { font-size: .75rem; color: var(--muted); display: flex; justify-content: space-between; }
+  .day.today .d { color: var(--accent); font-weight: 600; }
+  .dot { font-size: .74rem; border-radius: 6px; padding: 3px 5px; border-left: 3px solid var(--c, var(--accent)); background: color-mix(in srgb, var(--c, var(--accent)) 12%, transparent); overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+  .dot.published { opacity: .65; } .dot.failed { --c: var(--bad); }
+  .ch { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px; border-radius: 6px; color: #fff; font-size: .68rem; font-weight: 700; flex: none; }
+  .ch.linkedin { background: var(--linkedin); } .ch.facebook { background: var(--facebook); } .ch.instagram { background: linear-gradient(45deg, #f58529, #dd2a7b 50%, #8134af); }
+  ul.posts { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+  ul.posts li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: start; padding: 8px 0; border-top: 1px solid var(--border); }
+  ul.posts li:first-child { border-top: 0; }
+  .txt { white-space: pre-wrap; overflow-wrap: anywhere; }
+  .chip { font-size: .72rem; font-weight: 600; border-radius: 999px; padding: 1px 8px; border: 1px solid currentColor; white-space: nowrap; }
+  .chip.draft { color: var(--warn); } .chip.scheduled { color: var(--info); } .chip.published { color: var(--ok); } .chip.failed, .chip.rejected, .chip.expired { color: var(--bad); }
+  .empty { color: var(--muted); padding: 10px 0; }
+  .err { color: var(--bad); }
+  .legend { display: flex; gap: 12px; flex-wrap: wrap; font-size: .78rem; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 5px; }
+  @media (max-width: 640px) {
+    .cal { grid-template-columns: 1fr; }
+    .day { min-height: 0; }
+    .day.none { display: none; }
+  }
+</style>
+</head>
+<body>
+  <div class="row">
+    <h1>Socials</h1>
+    <span class="meta" id="sub">LinkedIn, Facebook and Instagram</span>
+    <span class="spacer"></span>
+    <button class="btn" data-go="#/koppelingen">Accounts</button>
+    <button class="btn primary" data-go="#/koppelingen" id="approve">Approve drafts</button>
+  </div>
+  <div class="stats" id="stats" aria-live="polite"></div>
+  <section class="panel" aria-label="Content calendar">
+    <div class="row"><h2>Next two weeks</h2><span class="spacer"></span>
+      <div class="legend"><span><i class="ch linkedin">in</i>LinkedIn</span><span><i class="ch facebook">f</i>Facebook</span><span><i class="ch instagram">◎</i>Instagram</span></div>
+    </div>
+    <div class="cal" id="cal"></div>
+  </section>
+  <section class="panel" aria-label="Waiting for approval">
+    <h2>Waiting for approval</h2>
+    <ul class="posts" id="waiting"></ul>
+  </section>
+  <section class="panel" aria-label="Recent posts">
+    <h2>Recent</h2>
+    <ul class="posts" id="recent"></ul>
+  </section>
+  <p class="meta">Agents only draft. A post goes out after its account's approver clicks Publish in Agent Control (Integrations → Social posts for approval), now or at the scheduled time.</p>
+
+<script>
+  // ---------- bridge ----------
+  const pending = new Map();
+  let seq = 0, started = false;
+  /** A request to this plugin's own route, through the dashboard (which adds the workspace and the session). */
+  function call(method, path, body) {
+    return new Promise((resolve, reject) => {
+      const id = ++seq;
+      pending.set(id, { resolve, reject });
+      parent.postMessage({ type: "agent-control:request", id, method, path, body }, "*");
+      setTimeout(() => { if (pending.delete(id)) reject(new Error("No answer from Agent Control")); }, 20000);
+    });
+  }
+  const go = (href) => parent.postMessage({ type: "agent-control:navigate", href }, "*");
+  addEventListener("message", (e) => {
+    if (e.source !== parent) return;
+    const m = e.data || {};
+    // Init comes on load and again when the dashboard switches light/dark or design: load the data only the first time.
+    if (m.type === "agent-control:init") { applyTheme(m.theme); if (!started) { started = true; load(); } }
+    if (m.type === "agent-control:response" && pending.has(m.id)) {
+      const p = pending.get(m.id); pending.delete(m.id);
+      m.ok ? p.resolve(m.data) : p.reject(new Error(m.error || "Request failed"));
+    }
+  });
+  function applyTheme(t) {
+    if (!t) return;
+    const root = document.documentElement;
+    for (const [k, v] of Object.entries(t.vars || {})) if (v) root.style.setProperty(k, v);
+    if (t.font) root.style.setProperty("--font", t.font);
+    root.dataset.mode = t.mode === "light" ? "light" : "dark";
+  }
+  new ResizeObserver(() => parent.postMessage({ type: "agent-control:resize", height: document.documentElement.scrollHeight + 4 }, "*")).observe(document.body);
+  document.querySelectorAll("[data-go]").forEach((b) => b.addEventListener("click", () => go(b.dataset.go)));
+
+  // ---------- rendering ----------
+  const CH = { linkedin: "in", facebook: "f", instagram: "◎" };
+  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  const el = (id) => document.getElementById(id);
+  const dayKey = (d) => `${d.getFullYear()}-${d.getMonth()}-${d.getDate()}`;
+  const time = (iso) => new Date(iso).toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" });
+  const when = (iso) => new Date(iso).toLocaleString("en-GB", { weekday: "short", day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" });
+  const badge = (ch) => `<i class="ch ${esc(ch)}" title="${esc(ch)}">${CH[ch] || "•"}</i>`;
+  const item = (p, at) => `<li>${badge(p.channel)}<div><div class="row"><strong>${esc(p.account || p.channel)}</strong><span class="meta">${esc(at)}</span>${p.task ? `<span class="meta">· ${esc(p.task.code)}</span>` : ""}</div><div class="txt">${esc(p.text)}</div>${p.error ? `<div class="err">${esc(p.error)}</div>` : ""}</div><span class="chip ${esc(p.status)}">${esc(p.statusLabel)}</span></li>`;
+
+  function render(posts) {
+    const now = Date.now();
+    const waiting = posts.filter((p) => p.status === "draft");
+    const scheduled = posts.filter((p) => p.status === "scheduled");
+    const published = posts.filter((p) => p.status === "published" && Date.parse(p.decidedAt || p.scheduledAt || p.createdAt) > now - 30 * 864e5);
+    const failed = posts.filter((p) => p.status === "failed");
+    el("stats").innerHTML = [["waiting", waiting.length, "waiting for approval"], ["scheduled", scheduled.length, "scheduled"], ["published", published.length, "published, 30 days"], ["failed", failed.length, "failed"]]
+      .map(([k, n, l]) => `<div class="stat ${k}"><b>${n}</b><span class="meta">${l}</span></div>`).join("");
+    el("approve").textContent = waiting.length ? `Approve ${waiting.length} draft${waiting.length === 1 ? "" : "s"}` : "Approve drafts";
+
+    // Calendar: today and the 13 days after it; a post sits on its scheduled day (or the day it went out).
+    const start = new Date(); start.setHours(0, 0, 0, 0);
+    const byDay = new Map();
+    for (const p of posts) {
+      const at = p.scheduledAt || (p.status === "published" ? p.decidedAt : null);
+      if (!at || !["scheduled", "published", "draft", "failed"].includes(p.status)) continue;
+      const k = dayKey(new Date(at));
+      byDay.set(k, [...(byDay.get(k) || []), { ...p, at }]);
+    }
+    let cells = "";
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(start); d.setDate(start.getDate() + i);
+      const list = (byDay.get(dayKey(d)) || []).sort((a, b) => a.at.localeCompare(b.at));
+      cells += `<div class="day${i === 0 ? " today" : ""}${list.length ? "" : " none"}"><div class="d"><span>${d.toLocaleDateString("en-GB", { weekday: "short", day: "numeric", month: "short" })}</span>${i === 0 ? "<span>today</span>" : ""}</div>`
+        + list.map((p) => `<div class="dot ${esc(p.status)}" style="--c: var(--${esc(p.channel)})" title="${esc(p.account)}: ${esc(p.text)}">${time(p.at)} ${esc(p.text)}</div>`).join("") + `</div>`;
+    }
+    el("cal").innerHTML = cells;
+
+    el("waiting").innerHTML = waiting.length ? waiting.map((p) => item(p, p.scheduledAt ? `for ${when(p.scheduledAt)}` : `drafted ${when(p.createdAt)}`)).join("")
+      : `<li class="empty">Nothing waiting. Ask an agent for a post, for example: "Draft a LinkedIn post about this week's release".</li>`;
+    const recent = posts.filter((p) => ["published", "failed", "rejected", "expired"].includes(p.status)).slice(0, 12);
+    el("recent").innerHTML = recent.length ? recent.map((p) => item(p, when(p.decidedAt || p.scheduledAt || p.createdAt))).join("") : `<li class="empty">No posts yet.</li>`;
+  }
+
+  async function load() {
+    try { render((await call("GET", "/posts")).posts || []); }
+    catch (e) { el("stats").innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  }
+  // Tell the dashboard we are here; it answers with "agent-control:init" (theme + workspace), then we load.
+  parent.postMessage({ type: "agent-control:ready" }, "*");
+  setInterval(() => { if (!document.hidden) load(); }, 60000);
+</script>
+</body>
+</html>

@@ -1,0 +1,18 @@
+{
+  "id": "instagram",
+  "name": "Instagram (business or creator)",
+  "version": "1.0.0",
+  "sdk": 1,
+  "kind": "social",
+  "auth": "token",
+  "author": "Remco Eijsackers",
+  "homepage": "https://github.com/remcoeijsackers/agent-control-socials",
+  "description": "Publishing through the Meta Graph API (instagram_content_publish). An Instagram post always needs an image with a public URL.",
+  "actions": ["read", "draft", "publish"],
+  "outbox": { "channel": "instagram", "maxLength": 2200, "requiresImage": true },
+  "settings": [
+    { "key": "igUserId", "label": "Instagram account ID (business)", "required": true },
+    { "key": "apiVersion", "label": "Graph API version", "placeholder": "v26.0", "pattern": "^v?\\d+\\.\\d+$" }
+  ],
+  "secrets": [{ "key": "token", "label": "Access token", "required": true }]
+}
