@@ -20,7 +20,7 @@ In Agent Control: **Plugins → Browse**, find **Socials** and click **Install**
 **Plugins → Installed** for the workspaces that need it.
 
 Or install a specific version: **Plugins → Installed → Install from a repository** with
-`remcoeijsackers/agent-control-socials`.
+`remcoeijsackers/mallows-plugin-socials`.
 
 Accounts that already existed before Socials became a plugin keep working: their settings, keys and drafts stay in
 Agent Control and come back as soon as the plugin is installed and on.
