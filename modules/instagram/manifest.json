@@ -6,7 +6,7 @@
   "kind": "social",
   "auth": "token",
   "author": "Remco Eijsackers",
-  "homepage": "https://github.com/remcoeijsackers/agent-control-socials",
+  "homepage": "https://github.com/remcoeijsackers/mallows-plugin-socials",
   "description": "Publishing through the Meta Graph API (instagram_content_publish). An Instagram post always needs an image with a public URL.",
   "actions": ["read", "draft", "publish"],
   "outbox": { "channel": "instagram", "maxLength": 2200, "requiresImage": true },
